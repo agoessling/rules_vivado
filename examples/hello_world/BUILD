@@ -32,6 +32,8 @@ verilog_module(
     ],
 )
 
+# Hello World project prints a message on the serial port of a Digilent Arty A7-35T.
+
 # The .bit, .load, .bin, and .flash targets can be created from the vivado_project macro.
 vivado_project(
     name = "hello_world_project",
