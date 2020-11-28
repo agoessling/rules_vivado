@@ -396,7 +396,8 @@ def bitstream(client, args):
   client.write_bitstream(args.output)
 
   if args.check:
-    _check(client)
+    if not _check(client):
+      raise CommandFailure()
 
 
 def load(client, args):
@@ -545,7 +546,7 @@ def main():
 
   # Check Command.
   parser_check = subparsers.add_parser('check',
-                                       parents=[parser_parent, parser_input, parser_output],
+                                       parents=[parser_parent, parser_input],
                                        help='Run design checks.')
   parser_check.set_defaults(func=check)
 
