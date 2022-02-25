@@ -1,17 +1,15 @@
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@rules_verilog//verilog:defs.bzl", "VerilogModuleInfo")
 
-
 VivadoInfo = provider(
     doc = "Info pertaining to Vivado target.",
     fields = ["part"],
 )
 
-
 def _vivado_bitstream_impl(ctx):
     name, ext = paths.split_extension(ctx.label.name)
     if not ext:
-      ext = ".bit"
+        ext = ".bit"
 
     common_args = ["-p", ctx.attr.part]
 
@@ -20,6 +18,7 @@ def _vivado_bitstream_impl(ctx):
     synth_args = ctx.actions.args()
     synth_args.add("synth")
     synth_args.add_all(common_args)
+    synth_args.add_all("--tcl", ctx.files.pre_synth_tcl)
     synth_args.add("-t", ctx.attr.module[VerilogModuleInfo].top)
     synth_args.add_all("-v", ctx.attr.module[VerilogModuleInfo].files)
     synth_args.add("-o", post_synth)
@@ -38,6 +37,7 @@ def _vivado_bitstream_impl(ctx):
     place_args = ctx.actions.args()
     place_args.add("place")
     place_args.add_all(common_args)
+    place_args.add_all("--tcl", ctx.files.pre_place_tcl)
     place_args.add_all("-c", ctx.files.io_constraints)
     place_args.add("-i", post_synth)
     place_args.add("-o", post_place)
@@ -56,6 +56,7 @@ def _vivado_bitstream_impl(ctx):
     route_args = ctx.actions.args()
     route_args.add("route")
     route_args.add_all(common_args)
+    place_args.add_all("--tcl", ctx.files.pre_route_tcl)
     route_args.add("-i", post_place)
     route_args.add("-o", post_route)
 
@@ -92,7 +93,6 @@ def _vivado_bitstream_impl(ctx):
         VivadoInfo(part = ctx.attr.part),
     ]
 
-
 vivado_bitstream = rule(
     implementation = _vivado_bitstream_impl,
     doc = "Generate Vivado bitstream.",
@@ -112,6 +112,24 @@ vivado_bitstream = rule(
             allow_empty = False,
             allow_files = [".xdc"],
         ),
+        "pre_synth_tcl": attr.label_list(
+            doc = "Tcl sources to run before synthesis.",
+            mandatory = True,
+            allow_empty = False,
+            allow_files = [".tcl"],
+        ),
+        "pre_place_tcl": attr.label_list(
+            doc = "Tcl sources to run before placement.",
+            mandatory = True,
+            allow_empty = False,
+            allow_files = [".tcl"],
+        ),
+        "pre_route_tcl": attr.label_list(
+            doc = "Tcl sources to run before routing.",
+            mandatory = True,
+            allow_empty = False,
+            allow_files = [".tcl"],
+        ),
         "bitstream_constraints": attr.label_list(
             doc = "Xilinx constraints for bitstream generation.",
             mandatory = True,
@@ -127,11 +145,10 @@ vivado_bitstream = rule(
     },
 )
 
-
 def _vivado_config_memory_impl(ctx):
     name, ext = paths.split_extension(ctx.label.name)
     if not ext:
-      ext = ".bin"
+        ext = ".bin"
 
     config_memory = ctx.actions.declare_file("{}{}".format(name, ext))
 
@@ -156,7 +173,6 @@ def _vivado_config_memory_impl(ctx):
         ctx.attr.bitstream[VivadoInfo],
     ]
 
-
 vivado_config_memory = rule(
     implementation = _vivado_config_memory_impl,
     doc = "Generate Vivado configuration memory.",
@@ -178,8 +194,16 @@ vivado_config_memory = rule(
             doc = "Configuration memory interface.",
             mandatory = True,
             values = [
-                "SMAPx8", "SMAPx16", "SMAPx32", "SERIALx1",
-                "SPIx1", "SPIx2", "SPIx4", "SPIx8", "BPIx8", "BPIx16"
+                "SMAPx8",
+                "SMAPx16",
+                "SMAPx32",
+                "SERIALx1",
+                "SPIx1",
+                "SPIx2",
+                "SPIx4",
+                "SPIx8",
+                "BPIx8",
+                "BPIx16",
             ],
         ),
         "_vivado_client": attr.label(
@@ -191,7 +215,6 @@ vivado_config_memory = rule(
     },
 )
 
-
 def _vivado_load_impl(ctx):
     shell_cmd = [
         ctx.executable._vivado_client.short_path,
@@ -199,11 +222,11 @@ def _vivado_load_impl(ctx):
         "-p",
         ctx.attr.bitstream[VivadoInfo].part,
         "-i",
-        " ".join([f.short_path for f in ctx.attr.bitstream[DefaultInfo].files.to_list()])
+        " ".join([f.short_path for f in ctx.attr.bitstream[DefaultInfo].files.to_list()]),
     ]
 
     script = ctx.actions.declare_file("{}.sh".format(ctx.label.name))
-    ctx.actions.write(script, ' '.join(shell_cmd), is_executable = True)
+    ctx.actions.write(script, " ".join(shell_cmd), is_executable = True)
 
     runfiles = ctx.runfiles(
         transitive_files = depset(
@@ -214,7 +237,6 @@ def _vivado_load_impl(ctx):
         ),
     )
     return [DefaultInfo(executable = script, runfiles = runfiles)]
-
 
 vivado_load = rule(
     implementation = _vivado_load_impl,
@@ -239,7 +261,6 @@ vivado_load = rule(
     executable = True,
 )
 
-
 def _vivado_flash_impl(ctx):
     shell_cmd = [
         ctx.executable._vivado_client.short_path,
@@ -249,11 +270,11 @@ def _vivado_flash_impl(ctx):
         "--memory",
         ctx.attr.memory_pn,
         "-i",
-        " ".join([f.short_path for f in ctx.attr.config[DefaultInfo].files.to_list()])
+        " ".join([f.short_path for f in ctx.attr.config[DefaultInfo].files.to_list()]),
     ]
 
     script = ctx.actions.declare_file("{}.sh".format(ctx.label.name))
-    ctx.actions.write(script, ' '.join(shell_cmd), is_executable = True)
+    ctx.actions.write(script, " ".join(shell_cmd), is_executable = True)
 
     runfiles = ctx.runfiles(
         transitive_files = depset(
@@ -264,7 +285,6 @@ def _vivado_flash_impl(ctx):
         ),
     )
     return [DefaultInfo(executable = script, runfiles = runfiles)]
-
 
 vivado_flash = rule(
     implementation = _vivado_flash_impl,
@@ -293,9 +313,15 @@ vivado_flash = rule(
     executable = True,
 )
 
-
-def vivado_project(name, module, part, io_constraints, bitstream_constraints, memory_size,
-                   memory_interface, memory_pn):
+def vivado_project(
+        name,
+        module,
+        part,
+        io_constraints,
+        bitstream_constraints,
+        memory_size,
+        memory_interface,
+        memory_pn):
     vivado_bitstream(
         name = "{}.bit".format(name),
         module = module,
