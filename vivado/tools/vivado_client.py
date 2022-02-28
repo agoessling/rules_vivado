@@ -30,10 +30,12 @@ class CommandTimeout(Exception):
 class VivadoClient:
   PROMPT = b'Vivado% '
 
+  # TODO(stridge-cruxml) Pass in the whitelist as a configuration file.
   WHITE_LIST = [
       b'Common 17-53',  # Error regarding closing non-existent project.
-      b'Place 46-29',  # Warning about skipping physical synthesis in placer.
+      b'Place 46-29',   # Warning about skipping physical synthesis in placer.
       b'Synth 8-1921',  # Incorrect warning about system task syntax.
+      b'Synth 8-7080',  # Warning because design is too small to use parallel.
   ]
 
   def _command(timeout=None):
