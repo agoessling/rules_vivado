@@ -516,7 +516,7 @@ def main():
     parser_parent = argparse.ArgumentParser(add_help=False)
     parser_parent.add_argument("-p", "--part", required=True, help="Part number.")
     parser_parent.add_argument("-c", "--constraint", nargs="+", help="Constraint file.")
-    parser_parent.add_argument("--tcl", default=None, help="Tcl script to run.")
+    parser_parent.add_argument("--tcl", nargs="+", default=None, help="Tcl script to run.")
     parser_parent.add_argument(
         "--verbose", action="store_true", help="Display all output, not just errors."
     )
