@@ -25,7 +25,7 @@ def _vivado_bitstream_impl(ctx):
 
     ctx.actions.run(
         outputs = [post_synth],
-        inputs = ctx.attr.module[VerilogModuleInfo].files,
+        inputs = ctx.files.pre_synth_tcl + ctx.attr.module[VerilogModuleInfo].files.to_list(),
         executable = ctx.attr._vivado_client[DefaultInfo].files_to_run,
         arguments = [synth_args],
         mnemonic = "VivadoSynth",
@@ -44,7 +44,7 @@ def _vivado_bitstream_impl(ctx):
 
     ctx.actions.run(
         outputs = [post_place],
-        inputs = ctx.files.io_constraints + [post_synth],
+        inputs = ctx.files.io_constraints + [post_synth] + ctx.files.pre_place_tcl,
         executable = ctx.attr._vivado_client[DefaultInfo].files_to_run,
         arguments = [place_args],
         mnemonic = "VivadoPlace",
@@ -56,13 +56,13 @@ def _vivado_bitstream_impl(ctx):
     route_args = ctx.actions.args()
     route_args.add("route")
     route_args.add_all(common_args)
-    place_args.add_all("--tcl", ctx.files.pre_route_tcl)
+    route_args.add_all("--tcl", ctx.files.pre_route_tcl)
     route_args.add("-i", post_place)
     route_args.add("-o", post_route)
 
     ctx.actions.run(
         outputs = [post_route],
-        inputs = [post_place],
+        inputs = [post_place] + ctx.files.pre_route_tcl,
         executable = ctx.attr._vivado_client[DefaultInfo].files_to_run,
         arguments = [route_args],
         mnemonic = "VivadoRoute",
@@ -114,20 +114,14 @@ vivado_bitstream = rule(
         ),
         "pre_synth_tcl": attr.label_list(
             doc = "Tcl sources to run before synthesis.",
-            mandatory = True,
-            allow_empty = False,
             allow_files = [".tcl"],
         ),
         "pre_place_tcl": attr.label_list(
             doc = "Tcl sources to run before placement.",
-            mandatory = True,
-            allow_empty = False,
             allow_files = [".tcl"],
         ),
         "pre_route_tcl": attr.label_list(
             doc = "Tcl sources to run before routing.",
-            mandatory = True,
-            allow_empty = False,
             allow_files = [".tcl"],
         ),
         "bitstream_constraints": attr.label_list(

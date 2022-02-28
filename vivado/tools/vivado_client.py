@@ -157,10 +157,12 @@ class VivadoClient:
         cmd = "read_verilog{:s} {{{:s}}}\r".format(sv_flag, " ".join(files))
         self.socket.sendall(cmd.encode())
 
+
     @_command()
     def source_tcl(self, files):
-        cmd = "source {{{:s}}}\r".format(" ".join(files))
-        self.socket.sendall(cmd.encode())
+        for file in files:
+          cmd = "source {:s}\r\n".format(file)
+          self.socket.sendall(cmd.encode())
 
     @_command()
     def synth_design(self, top, part):
@@ -516,7 +518,7 @@ def main():
     parser_parent = argparse.ArgumentParser(add_help=False)
     parser_parent.add_argument("-p", "--part", required=True, help="Part number.")
     parser_parent.add_argument("-c", "--constraint", nargs="+", help="Constraint file.")
-    parser_parent.add_argument("--tcl", default=None, help="Tcl script to run.")
+    parser_parent.add_argument("--tcl", nargs="+", default=None, help="Tcl script to run.")
     parser_parent.add_argument(
         "--verbose", action="store_true", help="Display all output, not just errors."
     )
